@@ -1,0 +1,6 @@
+[submodule "components/esp-32-tm1637"]
+	path = components/esp-32-tm1637
+	url = https://github.com/malinges/esp-32-tm1637.git
+[submodule "components/esp32-wifi-manager"]
+	path = components/esp32-wifi-manager
+	url = https://github.com/tonyp7/esp32-wifi-manager.git
