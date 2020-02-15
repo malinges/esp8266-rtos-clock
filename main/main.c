@@ -19,6 +19,7 @@
 #include "wifi_manager.h"
 
 #include "clock.h"
+#include "vdd_monitoring.h"
 #include "tz.h"
 
 static const char *TAG = "main";
@@ -56,6 +57,9 @@ void app_main()
 
     ESP_LOGI(TAG, "creating heap stats task");
     xTaskCreate(&heap_stats_task, "heap_stats", 1024, NULL, 2, NULL);
+
+    ESP_LOGI(TAG, "creating VDD monitoring task");
+    xTaskCreate(&vdd_monitoring_task, "vdd_mon", 1024, NULL, 2, NULL);
  
     ESP_LOGI(TAG, "starting wifi manager");
     wifi_manager_start();
