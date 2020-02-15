@@ -38,10 +38,12 @@ static const uint8_t colon_mask = 0b10000000;
 static tm1637_led_t *display;
 
 static void display_buffer(const uint8_t buf[4]) {
+    taskENTER_CRITICAL();
     tm1637_set_segment_raw(display, 0, buf[0]);
     tm1637_set_segment_raw(display, 1, buf[1]);
     tm1637_set_segment_raw(display, 2, buf[2]);
     tm1637_set_segment_raw(display, 3, buf[3]);
+    taskEXIT_CRITICAL();
 }
 
 esp_err_t clock_init() {
@@ -106,20 +108,19 @@ void clock_task(void *pvParameters) {
 
     ESP_LOGI(TAG, "Clock synchronized, starting time display");
 
+    TickType_t tick = xTaskGetTickCount();
+
     while (1) {
-        struct timeval update_start;
-        ESP_ERROR_CHECK(gettimeofday(&update_start, NULL));
+        struct timeval tv;
+        ESP_ERROR_CHECK(gettimeofday(&tv, NULL));
 
         clock_display_time(NULL);
 
-        struct timeval update_end;
-        ESP_ERROR_CHECK(gettimeofday(&update_end, NULL));
-
-        suseconds_t ms_until_next = (1000000 - update_end.tv_usec) / 1000;
+        suseconds_t ms_until_next = (1000000 - tv.tv_usec) / 1000;
         TickType_t ticks_until_next = ms_until_next / portTICK_RATE_MS + 1;
+        ESP_LOGI(TAG, "Update delay: %ldus, next update in %u ticks", tv.tv_usec, ticks_until_next);
 
-        ESP_LOGI(TAG, "Update delay: %ldus, next update in %u ticks", update_start.tv_usec, ticks_until_next);
-        vTaskDelay(ticks_until_next);
+        vTaskDelayUntil(&tick, ticks_until_next);
     }
 
     vTaskDelete(NULL);

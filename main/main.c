@@ -66,5 +66,5 @@ void app_main()
     wifi_manager_set_callback(EVENT_STA_GOT_IP, &initialize_sntp);
 
     ESP_LOGI(TAG, "creating clock task");
-    xTaskCreate(&clock_task, "clock", 2048, NULL, 5, NULL);
+    xTaskCreate(&clock_task, "clock", 2048, NULL, 15, NULL);
 }
