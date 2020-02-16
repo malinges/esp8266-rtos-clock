@@ -8,11 +8,6 @@ menu "Application config"
         string "Timezone"
         default "America/Montreal"
 
-    config CLOCK_BRIGHTNESS
-        int "Clock brightness (0 to 7)"
-        range 0 7
-        default 0
-
     config CLOCK_CLK_PIN
         int "Clock CLK pin number"
         default 5

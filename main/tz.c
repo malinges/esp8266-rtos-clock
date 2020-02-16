@@ -2,7 +2,7 @@
 #include <time.h>
 #include <string.h>
 
-#include "./tz.h"
+#include "tz.h"
 
 const timezone_t timezones[] = {
   { "Africa/Abidjan", "GMT0" },
