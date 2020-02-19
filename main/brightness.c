@@ -62,6 +62,6 @@ void brightness_task(void *pvParameters) {
             display_set_brightness(brightness);
         }
 
-        vTaskDelayUntil(&tick, 200 / portTICK_RATE_MS);
+        vTaskDelayUntil(&tick, 1000 / portTICK_RATE_MS);
     }
 }
