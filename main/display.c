@@ -144,22 +144,38 @@ void display_task(void *pvParameters) {
     wait_until_clock_synchronized();
     ESP_LOGI(TAG, "Clock synchronized, starting time display");
 
-    TickType_t tick = xTaskGetTickCount();
+    time_t last_sec = 0;
 
     while (1) {
         taskENTER_CRITICAL();
 
-        struct timeval tv;
-        ESP_ERROR_CHECK(gettimeofday(&tv, NULL));
+        struct timeval tv_init;
+        ESP_ERROR_CHECK(gettimeofday(&tv_init, NULL));
+
+        struct timeval tv_start;
+        size_t loop_iters = 0;
+        // Oh no, a busy wait! :-O
+        do {
+            ESP_ERROR_CHECK(gettimeofday(&tv_start, NULL));
+            loop_iters++;
+        } while (last_sec != 0 && tv_start.tv_sec <= last_sec);
+        last_sec = tv_start.tv_sec;
 
         display_time();
 
-        suseconds_t ms_until_next = (1000000 - tv.tv_usec) / 1000;
-        TickType_t ticks_until_next = ms_until_next / portTICK_RATE_MS + 1;
-        ESP_LOGI(TAG, "Update delay: %ldus, next update in %u ticks", tv.tv_usec, ticks_until_next);
+        int64_t due_time = last_sec * 1000000;
+        int64_t call_time = tv_init.tv_sec * 1000000 + tv_init.tv_usec;
+
+        ESP_LOGI(TAG, "Call delay: %dus, update delay: %ldus, %u iters",
+            (int) (call_time - due_time), tv_start.tv_usec, loop_iters);
+
+        struct timeval tv_end;
+        ESP_ERROR_CHECK(gettimeofday(&tv_end, NULL));
+        suseconds_t ms_until_next = (1000000 - tv_end.tv_usec) / 1000;
+        TickType_t ticks_until_next = ms_until_next / portTICK_RATE_MS;
 
         taskEXIT_CRITICAL();
 
-        vTaskDelayUntil(&tick, ticks_until_next);
+        vTaskDelay(ticks_until_next);
     }
 }
