@@ -73,14 +73,6 @@ static esp_err_t time_to_buffer(struct tm *tm, uint8_t *out) {
 }
 
 static void display_buffer(const uint8_t *buf) {
-    static uint8_t last_buffer[4];
-
-    if (buf == NULL) {
-        buf = last_buffer;
-    } else {
-        memcpy(last_buffer, buf, sizeof(last_buffer));
-    }
-
     taskENTER_CRITICAL();
     tm1637_set_segment_raw(display, 0, buf[0]);
     tm1637_set_segment_raw(display, 1, buf[1]);
@@ -135,7 +127,6 @@ esp_err_t display_init() {
 
 void display_set_brightness(uint8_t brightness) {
     tm1637_set_brightness(display, brightness > MAX_BRIGHTNESS ? MAX_BRIGHTNESS : brightness);
-    display_buffer(NULL);
 }
 
 void display_task(void *pvParameters) {
