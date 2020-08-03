@@ -5,7 +5,6 @@
 
 #include "esp_err.h"
 
-esp_err_t display_init();
 void display_set_brightness(uint8_t brightness);
 void display_task(void *pvParameters);
 

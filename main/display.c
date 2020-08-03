@@ -113,7 +113,7 @@ static void wait_until_clock_synchronized() {
     }
 }
 
-esp_err_t display_init() {
+static esp_err_t display_init() {
     display = tm1637_init(CLK_PIN, DIO_PIN);
 
     if (display == NULL) return ESP_FAIL;
