@@ -3,11 +3,13 @@
 #include <time.h>
 
 #include "freertos/FreeRTOS.h"
+#include "freertos/event_groups.h"
 #include "freertos/task.h"
 
 #include "esp_err.h"
 #include "esp_log.h"
 #include "driver/gpio.h"
+#include "driver/hw_timer.h"
 
 #include "tm1637.h"
 
@@ -38,6 +40,10 @@ DRAM_ATTR static const uint8_t num_table[] = {
     0b01111111, // 8
     0b01101111, // 9
 };
+
+static volatile EventGroupHandle_t eventGroupHandle;
+
+#define DISPLAY_UPDATE_PENDING_BIT 1
 
 static esp_err_t get_time(struct tm *tm) {
     time_t t = time(NULL);
@@ -125,6 +131,13 @@ static esp_err_t display_init() {
     return ESP_OK;
 }
 
+IRAM_ATTR static void hw_timer_callback(void *arg) {
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    if (xEventGroupSetBitsFromISR(eventGroupHandle, DISPLAY_UPDATE_PENDING_BIT, &xHigherPriorityTaskWoken) == pdTRUE) {
+        portEND_SWITCHING_ISR(xHigherPriorityTaskWoken);
+    }
+}
+
 void display_set_brightness(uint8_t brightness) {
     tm1637_set_brightness(display, brightness > MAX_BRIGHTNESS ? MAX_BRIGHTNESS : brightness);
 }
@@ -132,41 +145,31 @@ void display_set_brightness(uint8_t brightness) {
 void display_task(void *pvParameters) {
     ESP_ERROR_CHECK(display_init());
 
+    eventGroupHandle = xEventGroupCreate();
+
+    ESP_ERROR_CHECK(hw_timer_init(&hw_timer_callback, NULL));
+
     wait_until_clock_synchronized();
     ESP_LOGI(TAG, "Clock synchronized, starting time display");
 
-    time_t last_sec = 0;
+    struct timeval tv;
 
     while (1) {
         taskENTER_CRITICAL();
 
-        struct timeval tv_init;
-        ESP_ERROR_CHECK(gettimeofday(&tv_init, NULL));
-
-        struct timeval tv_start;
-        size_t loop_iters = 0;
-        // Oh no, a busy wait! :-O
-        do {
-            ESP_ERROR_CHECK(gettimeofday(&tv_start, NULL));
-            loop_iters++;
-        } while (last_sec != 0 && tv_start.tv_sec <= last_sec);
-        last_sec = tv_start.tv_sec;
+        ESP_ERROR_CHECK(gettimeofday(&tv, NULL));
+        ESP_LOGI(TAG, "Called at: %ldus", tv.tv_usec);
 
         display_time();
 
-        int64_t due_time = last_sec * 1000000;
-        int64_t call_time = tv_init.tv_sec * 1000000 + tv_init.tv_usec;
-
-        ESP_LOGI(TAG, "Call delay: %dus, update delay: %ldus, %u iters",
-            (int) (call_time - due_time), tv_start.tv_usec, loop_iters);
-
-        struct timeval tv_end;
-        ESP_ERROR_CHECK(gettimeofday(&tv_end, NULL));
-        suseconds_t ms_until_next = (1000000 - tv_end.tv_usec) / 1000;
-        TickType_t ticks_until_next = ms_until_next / portTICK_RATE_MS;
+        ESP_ERROR_CHECK(gettimeofday(&tv, NULL));
+        uint32_t alarm_us = 1001000 - tv.tv_usec;
+        ESP_ERROR_CHECK(hw_timer_alarm_us(alarm_us < 10 ? 10 : alarm_us, false));
 
         taskEXIT_CRITICAL();
 
-        vTaskDelay(ticks_until_next);
+        while ((xEventGroupWaitBits(eventGroupHandle, DISPLAY_UPDATE_PENDING_BIT, pdTRUE, pdFALSE, 2000 / portTICK_RATE_MS) & DISPLAY_UPDATE_PENDING_BIT) == 0) {
+            ESP_LOGW(TAG, "Still waiting for display update...");
+        }
     }
 }
