@@ -14,6 +14,7 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "esp_system.h"
+#include "esp_ota_ops.h"
 #include "lwip/apps/sntp.h"
 
 #include "wifi_manager.h"
@@ -50,7 +51,9 @@ static void heap_stats_task(void *arg)
 
 void app_main()
 {
-    ESP_LOGI(TAG, "starting!");
+    const esp_app_desc_t *app_desc = esp_ota_get_app_description();
+    ESP_LOGI(TAG, "%s %s compiled %s %s", app_desc->project_name,
+        app_desc->version, app_desc->date, app_desc->time);
 
     ESP_LOGI(TAG, "setting timezone");
     ESP_ERROR_CHECK(tz_set_tz(TZ_NAME));
