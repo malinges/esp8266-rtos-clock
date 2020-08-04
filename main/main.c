@@ -63,7 +63,7 @@ void app_main()
     wifi_manager_set_callback(EVENT_STA_GOT_IP, &initialize_sntp);
 
     ESP_LOGI(TAG, "creating display task");
-    xTaskCreate(&display_task, "display", 2048, NULL, 3, NULL);
+    xTaskCreate(&display_task, "display", 2048, NULL, 7, NULL);
 
     ESP_LOGI(TAG, "creating brightness monitoring task");
     xTaskCreate(&brightness_task, "brightness", 2048, NULL, 2, NULL);
