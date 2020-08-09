@@ -153,6 +153,7 @@ void display_task(void *pvParameters) {
     ESP_LOGI(TAG, "Clock synchronized, starting time display");
 
     struct timeval tv;
+    time_t last_tv_sec = -1;
 
     while (1) {
         taskENTER_CRITICAL();
@@ -160,10 +161,21 @@ void display_task(void *pvParameters) {
         ESP_ERROR_CHECK(gettimeofday(&tv, NULL));
         ESP_LOGI(TAG, "Called at: %ldus", tv.tv_usec);
 
+        long busy_wait_iters = 0;
+        while (last_tv_sec != -1 && tv.tv_sec == last_tv_sec) {
+            ESP_ERROR_CHECK(gettimeofday(&tv, NULL));
+            busy_wait_iters++;
+        }
+
         display_time();
 
+        last_tv_sec = tv.tv_sec;
+        if (busy_wait_iters > 0) {
+            ESP_LOGI(TAG, "Busy wait: %ld iterations", busy_wait_iters);
+        }
+
         ESP_ERROR_CHECK(gettimeofday(&tv, NULL));
-        uint32_t alarm_us = 1001000 - tv.tv_usec;
+        uint32_t alarm_us = 1000000 - tv.tv_usec;
         ESP_ERROR_CHECK(hw_timer_alarm_us(alarm_us < 10 ? 10 : alarm_us, false));
 
         taskEXIT_CRITICAL();
