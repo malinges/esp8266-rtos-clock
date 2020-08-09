@@ -3,6 +3,8 @@
 # project subdirectory.
 #
 
+MAKEFLAGS := -j$(shell nproc)
+
 PROJECT_NAME := esp8266-rtos-clock
 
 include $(IDF_PATH)/make/project.mk
